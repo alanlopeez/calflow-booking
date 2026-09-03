@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-
 export interface IcsEventParams {
   title: string;
   description: string;
@@ -16,15 +14,40 @@ export function generateIcsFile(event: IcsEventParams): string {
   };
 
   const now = new Date();
-  const uid = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}@calsaas.com`;
+  const uid = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}@calflow.com`;
 
-  const cleanDescription = (event.description || "").replace(/\n/g, "\\n");
-  const cleanTitle = (event.title || "").replace(/\n/g, " ");
+  // Security: Sanitize CRLF injection
+  const sanitizeText = (val: string) => {
+    return val
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .replace(/\\/g, "\\\\")
+      .replace(/;/g, "\\;")
+      .replace(/,/g, "\\,");
+  };
+
+  const cleanDescription = sanitizeText(event.description || "").replace(/\n/g, "\\n");
+  const cleanTitle = (event.title || "")
+    .replace(/[\r\n]/g, " ")
+    .replace(/[;,]/g, " ")
+    .trim();
+
+  const cleanLocation = (event.location || "")
+    .replace(/[\r\n]/g, " ")
+    .trim();
+
+  const cleanOrganizerName = (event.organizerName || "")
+    .replace(/[\r\n":;]/g, "")
+    .trim();
+
+  const cleanOrganizerEmail = (event.organizerEmail || "")
+    .replace(/[\r\n\s]/g, "")
+    .trim();
 
   const icsLines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//CalSaaS//Booking App//EN",
+    "PRODID:-//CalFlow//Booking App//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:REQUEST",
     "BEGIN:VEVENT",
@@ -34,9 +57,9 @@ export function generateIcsFile(event: IcsEventParams): string {
     `DTEND:${formatDateToIcs(new Date(event.endTime))}`,
     `SUMMARY:${cleanTitle}`,
     `DESCRIPTION:${cleanDescription}`,
-    event.location ? `LOCATION:${event.location}` : "",
-    event.organizerName && event.organizerEmail
-      ? `ORGANIZER;CN=${event.organizerName}:mailto:${event.organizerEmail}`
+    cleanLocation ? `LOCATION:${cleanLocation}` : "",
+    cleanOrganizerName && cleanOrganizerEmail
+      ? `ORGANIZER;CN=${cleanOrganizerName}:mailto:${cleanOrganizerEmail}`
       : "",
     "STATUS:CONFIRMED",
     "END:VEVENT",

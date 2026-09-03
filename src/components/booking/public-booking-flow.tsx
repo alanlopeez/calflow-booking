@@ -50,7 +50,7 @@ import { getGoogleCalendarUrl, getOutlookCalendarUrl } from "@/lib/ics";
 interface HostData {
   id: string;
   name: string | null;
-  email: string | null;
+  email?: string | null;
   image: string | null;
   username: string | null;
   bio: string | null;

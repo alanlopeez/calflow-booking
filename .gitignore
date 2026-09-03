@@ -19,7 +19,14 @@
 
 # Environment & Credentials
 .env
-.env*.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+*credentials*.json
+*client_secret*.json
 google-credentials*.json
 
 # Vercel

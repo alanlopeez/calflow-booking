@@ -33,7 +33,6 @@ export default async function BookingPage({
       host={{
         id: user.id,
         name: user.name,
-        email: user.email,
         image: user.image,
         username: user.username,
         bio: user.bio,

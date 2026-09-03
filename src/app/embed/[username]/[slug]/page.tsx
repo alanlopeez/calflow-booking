@@ -30,7 +30,6 @@ export default async function EmbedBookingPage({
         host={{
           id: user.id,
           name: user.name,
-          email: user.email,
           image: user.image,
           username: user.username,
           bio: user.bio,

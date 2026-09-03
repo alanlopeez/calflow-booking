@@ -6,17 +6,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const eventTypeSchema = z.object({
-  title: z.string().min(2, "El título debe tener al menos 2 caracteres"),
-  slug: z.string().min(2, "El slug debe tener al menos 2 caracteres"),
-  description: z.string().optional(),
-  duration: z.number().min(5).max(720),
-  bufferBefore: z.number().min(0).max(120).default(0),
-  bufferAfter: z.number().min(0).max(120).default(0),
-  color: z.string().default("#0f172a"),
+  title: z.string().min(2, "El título debe tener al menos 2 caracteres").max(100, "El título es demasiado largo"),
+  slug: z.string().min(2, "El slug debe tener al menos 2 caracteres").max(60, "El slug es demasiado largo"),
+  description: z.string().max(1000, "La descripción es demasiado larga").optional(),
+  duration: z.number().int().min(5).max(720),
+  bufferBefore: z.number().int().min(0).max(120).default(0),
+  bufferAfter: z.number().int().min(0).max(120).default(0),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color hexadecimal inválido").default("#0f172a"),
   price: z.number().min(0).default(0),
-  currency: z.string().default("USD"),
-  locations: z.string().default('[{"type":"google_meet"}]'),
-  customInputs: z.string().optional(),
+  currency: z.string().length(3).default("USD"),
+  locations: z.string().max(1000).default('[{"type":"google_meet"}]'),
+  customInputs: z.string().max(5000).optional(),
 });
 
 export async function createEventType(formData: z.infer<typeof eventTypeSchema>) {
@@ -78,18 +78,31 @@ export async function updateEventType(id: string, formData: Partial<z.infer<type
     throw new Error("No autenticado");
   }
 
+  // Security Check: Verify ownership (IDOR prevention)
   const existing = await prisma.eventType.findFirst({
     where: { id, userId: session.user.id },
   });
 
   if (!existing) {
-    throw new Error("Tipo de evento no encontrado");
+    throw new Error("Tipo de evento no encontrado o no autorizado");
+  }
+
+  const validated = eventTypeSchema.partial().parse(formData);
+
+  let slugToUpdate = validated.slug;
+  if (slugToUpdate) {
+    slugToUpdate = slugToUpdate
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
   }
 
   const updated = await prisma.eventType.update({
-    where: { id },
+    where: { id: existing.id },
     data: {
-      ...formData,
+      ...validated,
+      ...(slugToUpdate ? { slug: slugToUpdate } : {}),
     },
   });
 
